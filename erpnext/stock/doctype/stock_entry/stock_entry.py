@@ -65,7 +65,9 @@ class StockEntry(StockController):
 			self.fg_completed_qty = 0.0
 
 		if self._action == 'submit':
-			self.make_batches('t_warehouse')
+			# Awful hack to force User to set Batch for Item
+			if self.purpose == "Manufacture":
+				self.make_batches('t_warehouse')
 		else:
 			set_batch_nos(self, 's_warehouse')
 

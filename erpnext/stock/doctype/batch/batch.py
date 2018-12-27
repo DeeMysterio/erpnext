@@ -233,6 +233,9 @@ def get_batch_no(item_code, warehouse, qty=1, throw=False):
 	:return: String represent batch number of batch with sufficient quantity else an empty String
 	"""
 
+	# Awful hack to force User to set Batch for Item
+	frappe.throw("Please set Batch No for item {0}".format(item_code))
+
 	batch_no = None
 	batches = get_batches(item_code, warehouse, qty, throw)
 
