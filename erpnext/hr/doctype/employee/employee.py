@@ -248,7 +248,9 @@ def send_birthday_reminders():
 		return
 
 	birthdays = get_employees_who_are_born_today()
-
+	print("birthdays")
+	print(birthdays)
+	print(len(birthdays))
 	if birthdays:
 		employee_list = frappe.get_all('Employee',
 			fields=['name','employee_name'],
@@ -283,13 +285,17 @@ def get_birthday_reminder_message(employee, employee_names):
 	pattern = "</Li><Br><Li>"
 	message = pattern.join(filter(lambda u: u not in (employee['employee_name']), employee_names))
 	message = message.title()
-
+	print("message")
+	print(message)
 	if pattern not in message:
-		message = "Today is {0}'s birthday \U0001F603".format(message)
-
+		# message = "Today is {0}'s birthday \U0001F603".format(message)
+		message = frappe.render_template("templates/emails/employee_birthday.html", {"birthday_names":frappe.get_all("Employee", filters={"employee_name": message, "status": "Active"}, fields=["image", "employee_name", "date_of_birth"])[0]
+		})
 	else:
-		message = "Today your colleagues are celebrating their birthdays \U0001F382<br><ul><strong><li> " + message +"</li></strong></ul>"
-
+		message.split("</Li><Br><Li>")
+		# message = "Today your colleagues are celebrating their birthdays \U0001F382<br><ul><strong><li> " + message +"</li></strong></ul>"
+		message = frappe.render_template("templates/emails/employee_birthday.html", {
+		})
 	return message
 
 
