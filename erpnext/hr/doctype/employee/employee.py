@@ -12,6 +12,7 @@ from frappe.permissions import add_user_permission, remove_user_permission, \
 from frappe.model.document import Document
 from erpnext.utilities.transaction_base import delete_events
 from frappe.utils.nestedset import NestedSet
+from datetime import date
 
 class EmployeeUserDisabledError(frappe.ValidationError): pass
 class EmployeeLeftValidationError(frappe.ValidationError): pass
@@ -248,9 +249,6 @@ def send_birthday_reminders():
 		return
 
 	birthdays = get_employees_who_are_born_today()
-	print("birthdays")
-	print(birthdays)
-	print(len(birthdays))
 	if birthdays:
 		employee_list = frappe.get_all('Employee',
 			fields=['name','employee_name'],
@@ -259,50 +257,24 @@ def send_birthday_reminders():
 		 	}
 		)
 		employee_emails = get_employee_emails(employee_list)
-		birthday_names = [name["employee_name"] for name in birthdays]
-		birthday_emails = [email["user_id"] or email["personal_email"] or email["company_email"] for email in birthdays]
-
-		birthdays.append({'company_email': '','employee_name': '','personal_email': '','user_id': ''})
-
-		for e in birthdays:
-			if e['company_email'] or e['personal_email'] or e['user_id']:
-				if len(birthday_names) == 1:
-					continue
-				recipients = e['company_email'] or e['personal_email'] or e['user_id']
-
-
+		
+		for birthday in birthdays:
+			if frappe.db.exists("Email Template", frappe.db.get_single_value("HR Settings", "birthday_email_template")):
+				email_template = frappe.get_doc("Email Template", frappe.db.get_single_value("HR Settings", "birthday_email_template")).response
 			else:
-				recipients = list(set(employee_emails) - set(birthday_emails))
+				email_template = "Happy Birthday {0}! \U0001F603".format(birthday["employee_name"])
 
-			frappe.sendmail(recipients=recipients,
-				subject=_("Birthday Reminder"),
-				message=get_birthday_reminder_message(e, birthday_names),
-				header=['Birthday Reminder', 'green'],
+			message = frappe.render_template(email_template, { "birthday_person": birthday })
+			frappe.sendmail(recipients=employee_emails,
+				subject=_("Happy Birthday"),
+				message=message
 			)
-
-def get_birthday_reminder_message(employee, employee_names):
-	"""Get employee birthday reminder message"""
-	pattern = "</Li><Br><Li>"
-	message = pattern.join(filter(lambda u: u not in (employee['employee_name']), employee_names))
-	message = message.title()
-	print("message")
-	print(message)
-	if pattern not in message:
-		# message = "Today is {0}'s birthday \U0001F603".format(message)
-		message = frappe.render_template("templates/emails/employee_birthday.html", {"birthday_names":frappe.get_all("Employee", filters={"employee_name": message, "status": "Active"}, fields=["image", "employee_name", "date_of_birth"])[0]
-		})
-	else:
-		message.split("</Li><Br><Li>")
-		# message = "Today your colleagues are celebrating their birthdays \U0001F382<br><ul><strong><li> " + message +"</li></strong></ul>"
-		message = frappe.render_template("templates/emails/employee_birthday.html", {
-		})
-	return message
 
 
 def get_employees_who_are_born_today():
 	"""Get Employee properties whose birthday is today."""
 	return frappe.db.get_values("Employee",
-		fieldname=["name", "personal_email", "company", "company_email", "user_id", "employee_name"],
+		fieldname=["name", "personal_email", "company", "company_email", "user_id", "employee_name", "image", "date_of_birth", "gender"],
 		filters={
 			"date_of_birth": ("like", "%{}".format(format_datetime(getdate(), "-MM-dd"))),
 			"status": "Active",
