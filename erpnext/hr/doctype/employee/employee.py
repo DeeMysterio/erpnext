@@ -274,7 +274,7 @@ def send_birthday_reminders():
 def get_employees_who_are_born_today():
 	"""Get Employee properties whose birthday is today."""
 	return frappe.db.get_values("Employee",
-		fieldname=["name", "personal_email", "company", "company_email", "user_id", "employee_name", "image", "date_of_birth"],
+		fieldname=["personal_email", "company", "company_email", "employee_name", "image", "date_of_birth"],
 		filters={
 			"date_of_birth": ("like", "%{}".format(format_datetime(getdate(), "-MM-dd"))),
 			"status": "Active",
