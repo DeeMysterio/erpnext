@@ -7,7 +7,7 @@ from frappe import _
 
 def execute():
 	frappe.reload_doc("email", "doctype", "email_template")
-	frappe.reload_doc("human_resources", "doctype", "hr_Settings")
+	frappe.reload_doc("hr", "doctype", "hr_settings")
 
 	if not frappe.db.exists("Email Template", _("Birthday Email Notification")):
 		response = "Happy Birthday"
