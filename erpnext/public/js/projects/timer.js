@@ -73,7 +73,7 @@ erpnext.timesheet.control_timer = function(frm, dialog, row, timestamp=0) {
 			row.activity_type = args.activity_type;
 			row.from_time = frappe.datetime.get_datetime_as_string();
 			row.project = args.project;
-			row.task = args.task;
+			row.from_time = args.to_time;
 			row.expected_hours = args.expected_hours;
 			row.completed = 0;
 			let d = moment(row.from_time);
