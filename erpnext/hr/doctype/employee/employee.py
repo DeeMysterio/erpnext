@@ -12,7 +12,6 @@ from frappe.permissions import add_user_permission, remove_user_permission, \
 from frappe.model.document import Document
 from erpnext.utilities.transaction_base import delete_events
 from frappe.utils.nestedset import NestedSet
-from datetime import date
 
 class EmployeeUserDisabledError(frappe.ValidationError): pass
 class EmployeeLeftValidationError(frappe.ValidationError): pass
@@ -259,10 +258,11 @@ def send_birthday_reminders():
 		employee_emails = get_employee_emails(employee_list)
 		
 		for birthday in birthdays:
-			if frappe.db.exists("Email Template", frappe.db.get_single_value("HR Settings", "birthday_email_template")):
-				email_template = frappe.get_doc("Email Template", frappe.db.get_single_value("HR Settings", "birthday_email_template")).response
+			birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
+			if frappe.db.exists("Email Template", birthday_email_template):
+				email_template = frappe.get_doc("Email Template", birthday_email_template).response
 			else:
-				email_template = "Happy Birthday {0}! \U0001F603".format(birthday["employee_name"])
+				email_template = "Happy Birthday {0}! \U0001F603".format(birthday.get("employee_name"))
 
 			message = frappe.render_template(email_template, birthday)
 			frappe.sendmail(recipients=employee_emails,
