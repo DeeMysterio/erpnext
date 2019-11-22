@@ -248,7 +248,7 @@ def install(country=None):
 	records += [{'doctype': 'Email Template', 'name': _("Dispatch Notification"), 'response': response,\
 		'subject': _("Your order is out for delivery!"), 'owner': frappe.session.user}]
 
-	records += [{'doctype': 'Email Template', 'name': _("Birthday"), 'response': response,\
+	records += [{'doctype': 'Email Template', 'name': _("Birthday Email Notification"), 'response': "Happy Birthday",\
 		'subject': _("Happy Birthday!"), 'owner': frappe.session.user}]
 
 	# Records for the Supplier Scorecard
