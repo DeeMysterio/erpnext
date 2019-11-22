@@ -248,6 +248,9 @@ def install(country=None):
 	records += [{'doctype': 'Email Template', 'name': _("Dispatch Notification"), 'response': response,\
 		'subject': _("Your order is out for delivery!"), 'owner': frappe.session.user}]
 
+	records += [{'doctype': 'Email Template', 'name': _("Birthday"), 'response': response,\
+		'subject': _("Happy Birthday!"), 'owner': frappe.session.user}]
+
 	# Records for the Supplier Scorecard
 	from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import make_default_records
 	make_default_records()
