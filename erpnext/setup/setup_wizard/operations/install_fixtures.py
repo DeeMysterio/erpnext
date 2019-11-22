@@ -248,7 +248,10 @@ def install(country=None):
 	records += [{'doctype': 'Email Template', 'name': _("Dispatch Notification"), 'response': response,\
 		'subject': _("Your order is out for delivery!"), 'owner': frappe.session.user}]
 
-	records += [{'doctype': 'Email Template', 'name': _("Birthday Email Notification"), 'response': "Happy Birthday",\
+	base_path = frappe.get_app_path("erpnext", "templates", "emails")
+	response = frappe.read_file(os.path.join(base_path, "birthday_email_notification.html"))
+
+	records += [{'doctype': 'Email Template', 'name': _("Birthday Email Notification"), 'response': response,\
 		'subject': _("Happy Birthday!"), 'owner': frappe.session.user}]
 
 	# Records for the Supplier Scorecard

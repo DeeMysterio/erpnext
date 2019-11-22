@@ -10,7 +10,8 @@ def execute():
 	frappe.reload_doc("hr", "doctype", "hr_settings")
 
 	if not frappe.db.exists("Email Template", _("Birthday Email Notification")):
-		response = "Happy Birthday"
+		base_path = frappe.get_app_path("erpnext", "templates", "emails")
+		response = frappe.read_file(os.path.join(base_path, "birthday_email_notification.html"))
 
 		frappe.get_doc({
 			"doctype": "Email Template",

@@ -264,7 +264,7 @@ def send_birthday_reminders():
 			else:
 				email_template = "Happy Birthday {0}! \U0001F603".format(birthday["employee_name"])
 
-			message = frappe.render_template(email_template, { "birthday_person": birthday })
+			message = frappe.render_template(email_template, birthday)
 			frappe.sendmail(recipients=employee_emails,
 				subject=_("Happy Birthday"),
 				message=message
