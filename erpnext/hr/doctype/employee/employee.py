@@ -356,8 +356,10 @@ def get_employee_emails(employee_list):
 	for employee in employee_list:
 		if not employee:
 			continue
+		user, company_email, personal_email = frappe.db.get_value('Employee', employee,
+											['user_id', 'company_email', 'personal_email'])
+		email = user or company_email or personal_email
 	
-		email = employee.user or employee.company_email or employee.personal_email
 		if email:
 			employee_emails.append(email)
 	return employee_emails
