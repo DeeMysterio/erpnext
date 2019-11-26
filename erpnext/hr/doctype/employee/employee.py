@@ -258,7 +258,7 @@ def send_birthday_reminders():
 		
 		for birthday in birthdays:
 			birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
-			if frappe.db.exists("Email Template", birthday_email_template):
+			if birthday_email_template:
 				email_template = frappe.get_doc("Email Template", birthday_email_template)
 				message = frappe.render_template(email_template.response, birthday)
 				subject = email_template.subject

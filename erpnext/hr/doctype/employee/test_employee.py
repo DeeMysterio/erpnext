@@ -31,14 +31,8 @@ class TestEmployee(unittest.TestCase):
 		send_birthday_reminders()
 
 		email_queue = frappe.db.sql("""select * from `tabEmail Queue`""", as_dict=True)
-
 		birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
-
-		message = "Happy Birthday"
-
-		if frappe.db.exists("Email Template", birthday_email_template):
-			email_template_subject = frappe.db.get_value("Email Template", birthday_email_template, "subject")
-			message = email_template_subject
+		message = frappe.db.get_value("Email Template", birthday_email_template, "subject") or "Happy Birthday"
 
 		self.assertTrue(message in email_queue[0].message)
 	
