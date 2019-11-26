@@ -18,9 +18,9 @@ class TestEmployee(unittest.TestCase):
 		employee.company_email = "test@example.com"
 		employee.save()
 
-		from erpnext.hr.doctype.employee.employee import get_employees_who_are_born_today, send_birthday_reminders
+		from erpnext.hr.doctype.employee.employee import get_employees_born_today, send_birthday_reminders
 
-		self.assertTrue(employee.name in [e.name for e in get_employees_who_are_born_today()])
+		self.assertTrue(employee.name in [e.name for e in get_employees_born_today()])
 
 		frappe.db.sql("delete from `tabEmail Queue`")
 
@@ -31,7 +31,16 @@ class TestEmployee(unittest.TestCase):
 		send_birthday_reminders()
 
 		email_queue = frappe.db.sql("""select * from `tabEmail Queue`""", as_dict=True)
-		self.assertTrue("Subject: Birthday Reminder" in email_queue[0].message)
+
+		birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
+
+		if frappe.db.exists("Email Template", birthday_email_template):
+			email_template = frappe.get_doc("Email Template", birthday_email_template)
+			self.assertTrue(email_template.subject in email_queue[0].message)
+		
+		else:
+			self.assertTrue("Happy Birthday" in email_queue[0].message)
+ 
 
 	def test_employee_status_left(self):
 		employee1 = make_employee("test_employee_1@company.com")

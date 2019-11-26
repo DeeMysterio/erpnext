@@ -243,10 +243,12 @@ def update_user_permissions(doc, method):
 		employee.update_user_permissions()
 
 def send_birthday_reminders():
+	print('********************************')
+	
 	"""Send Employee birthday reminders if no 'Stop Birthday Reminders' is not set."""
 	if int(frappe.db.get_single_value("HR Settings", "stop_birthday_reminders") or 0):
 		return
-	birthdays = get_employees_who_are_born_today()
+	birthdays = get_employees_born_today()
 	if birthdays:
 		employee_list = frappe.get_all('Employee',
 			fields=['name','employee_name'],
@@ -259,18 +261,20 @@ def send_birthday_reminders():
 		for birthday in birthdays:
 			birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
 			if frappe.db.exists("Email Template", birthday_email_template):
-				email_template = frappe.get_doc("Email Template", birthday_email_template).response
-				message = frappe.render_template(email_template, birthday)
+				email_template = frappe.get_doc("Email Template", birthday_email_template)
+				message = frappe.render_template(email_template.response, birthday)
+				subject = email_template.subject
 			else:
 				message = "Happy Birthday {0}! \U0001F603".format(birthday.get("employee_name"))
+				subject=_("Happy Birthday")
 
 			frappe.sendmail(recipients=employee_emails,
-				subject=_("Happy Birthday"),
-				message=message
+				message=message,
+				subject=subject
 			)
 
 
-def get_employees_who_are_born_today():
+def get_employees_born_today():
 	"""Get Employee properties whose birthday is today."""
 	current_date = getdate()
 	month = current_date.month
