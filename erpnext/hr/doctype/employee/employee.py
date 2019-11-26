@@ -246,17 +246,11 @@ def send_birthday_reminders():
 	"""Send Employee birthday reminders if no 'Stop Birthday Reminders' is not set."""
 	if int(frappe.db.get_single_value("HR Settings", "stop_birthday_reminders") or 0):
 		return
-	birthdays = get_employees_born_today()
-	if birthdays:
-		employee_list = frappe.get_all('Employee',
-			fields=['name','employee_name'],
-			filters={'status': 'Active',
-				'company': birthdays[0]['company']
-		 	}
-		)
-		employee_emails = get_employee_emails(employee_list)
+	employees = get_employees_born_today()
+	if employees:
+		employee_emails = get_employee_emails(employees)
 		
-		for birthday in birthdays:
+		for birthday in employees:
 			birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
 			if birthday_email_template:
 				email_template = frappe.get_doc("Email Template", birthday_email_template)
@@ -362,9 +356,8 @@ def get_employee_emails(employee_list):
 	for employee in employee_list:
 		if not employee:
 			continue
-		user, company_email, personal_email = frappe.db.get_value('Employee', employee,
-											['user_id', 'company_email', 'personal_email'])
-		email = user or company_email or personal_email
+	
+		email = employee.user or employee.company_email or employee.personal_email
 		if email:
 			employee_emails.append(email)
 	return employee_emails
