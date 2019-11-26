@@ -264,7 +264,7 @@ def send_birthday_reminders():
 				subject = email_template.subject
 			else:
 				message = "Happy Birthday {0}! \U0001F603".format(birthday.get("employee_name"))
-				subject=_("Happy Birthday")
+				subject = _("Happy Birthday")
 
 			frappe.sendmail(recipients=employee_emails,
 				message=message,
@@ -278,14 +278,14 @@ def get_employees_born_today():
 	month = current_date.month
 	day = current_date.day
 
-	employees_who_are_born_today = []
+	employees_born_today = []
 	employee_birthdays = frappe.get_all("Employee", filters={"status": "Active"}, fields=["*"])
 	for employee in employee_birthdays:
 		birthdate = getdate(employee.date_of_birth)
 		if birthdate.month == month and birthdate.day == day:
-			employees_who_are_born_today.append(employee)
+			employees_born_today.append(employee)
 
-	return employees_who_are_born_today
+	return employees_born_today
 
 
 def get_holiday_list_for_employee(employee, raise_exception=True):

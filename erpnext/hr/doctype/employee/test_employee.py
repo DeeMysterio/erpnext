@@ -34,14 +34,14 @@ class TestEmployee(unittest.TestCase):
 
 		birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
 
-		if frappe.db.exists("Email Template", birthday_email_template):
-			email_template = frappe.get_doc("Email Template", birthday_email_template)
-			self.assertTrue(email_template.subject in email_queue[0].message)
-		
-		else:
-			self.assertTrue("Happy Birthday" in email_queue[0].message)
- 
+		message = "Happy Birthday"
 
+		if frappe.db.exists("Email Template", birthday_email_template):
+			email_template_subject = frappe.db.get_value("Email Template", birthday_email_template, "subject")
+			message = email_template_subject
+
+		self.assertTrue(message in email_queue[0].message)
+	
 	def test_employee_status_left(self):
 		employee1 = make_employee("test_employee_1@company.com")
 		employee2 = make_employee("test_employee_2@company.com")
