@@ -243,8 +243,6 @@ def update_user_permissions(doc, method):
 		employee.update_user_permissions()
 
 def send_birthday_reminders():
-	print('********************************')
-	
 	"""Send Employee birthday reminders if no 'Stop Birthday Reminders' is not set."""
 	if int(frappe.db.get_single_value("HR Settings", "stop_birthday_reminders") or 0):
 		return
