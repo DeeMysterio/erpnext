@@ -30,12 +30,15 @@ class TestEmployee(unittest.TestCase):
 
 		send_birthday_reminders()
 
-		email_queue = frappe.db.sql("""select * from `tabEmail Queue`""", as_dict=True)
-		birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
-		message = frappe.db.get_value("Email Template", birthday_email_template, "subject") or "Happy Birthday"
+		email_queue = frappe.db.sql(
+			"""select * from `tabEmail Queue`""", as_dict=True)
+		birthday_email_template = frappe.db.get_single_value(
+			"HR Settings", "birthday_email_template")
+		message = frappe.db.get_value(
+			"Email Template", birthday_email_template, "subject") or "Happy Birthday"
 
 		self.assertTrue(message in email_queue[0].message)
-	
+
 	def test_employee_status_left(self):
 		employee1 = make_employee("test_employee_1@company.com")
 		employee2 = make_employee("test_employee_2@company.com")

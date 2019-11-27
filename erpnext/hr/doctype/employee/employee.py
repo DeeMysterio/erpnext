@@ -242,6 +242,7 @@ def update_user_permissions(doc, method):
 		employee = frappe.get_doc("Employee", {"user_id": doc.name})
 		employee.update_user_permissions()
 
+
 def send_birthday_reminders():
 	"""Send Employee birthday reminders if no 'Stop Birthday Reminders' is not set."""
 	if int(frappe.db.get_single_value("HR Settings", "stop_birthday_reminders") or 0):
@@ -250,7 +251,7 @@ def send_birthday_reminders():
 	if employees:
 		recipients_list = frappe.get_all('Employee', filters={'status': 'Active'})
 		recipients = get_employee_emails(recipients_list)
-		
+
 		birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
 		if birthday_email_template:
 			email_template = frappe.get_doc("Email Template", birthday_email_template)
@@ -264,9 +265,9 @@ def send_birthday_reminders():
 				subject = _("Happy Birthday")
 
 			frappe.sendmail(recipients=recipients,
-				message=message,
-				subject=subject
-			)
+                            message=message,
+                            subject=subject
+                   )
 
 
 def get_employees_born_today():
