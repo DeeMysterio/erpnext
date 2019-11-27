@@ -248,7 +248,8 @@ def send_birthday_reminders():
 		return
 	employees = get_employees_born_today()
 	if employees:
-		employee_emails = get_employee_emails(employees)
+		employee_list = frappe.get_all('Employee', fields=['name', 'employee_name'], filters={'status': 'Active'})
+		employee_emails = get_employee_emails(employee_list)
 		
 		for employee in employees:
 			birthday_email_template = frappe.db.get_single_value("HR Settings", "birthday_email_template")
@@ -359,7 +360,6 @@ def get_employee_emails(employee_list):
 		user, company_email, personal_email = frappe.db.get_value('Employee', employee,
 											['user_id', 'company_email', 'personal_email'])
 		email = user or company_email or personal_email
-	
 		if email:
 			employee_emails.append(email)
 	return employee_emails
