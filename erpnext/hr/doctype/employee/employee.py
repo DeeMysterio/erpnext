@@ -265,9 +265,9 @@ def send_birthday_reminders():
 				subject = _("Happy Birthday")
 
 			frappe.sendmail(recipients=recipients,
-                            message=message,
-                            subject=subject
-                   )
+							message=message,
+							subject=subject
+					)
 
 
 def get_employees_born_today():
