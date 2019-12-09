@@ -281,7 +281,11 @@ class LeaveApplication(Document):
 
 	def notify_employee(self):
 		employee = frappe.get_doc("Employee", self.employee)
-		if not employee.user_id:
+
+		recipients_list = frappe.get_all('Employee', filters={'status': 'Active'}, or_filters=[{'branch': employee.branch}, {'department': employee.department}])
+		recipients = get_employee_emails(recipients_list)
+
+		if not recipients:
 			return
 
 		parent_doc = frappe.get_doc('Leave Application', self.name)
@@ -293,9 +297,6 @@ class LeaveApplication(Document):
 			return
 		email_template = frappe.get_doc("Email Template", template)
 		message = frappe.render_template(email_template.response, args)
-
-		recipients_list = frappe.get_all('Employee', filters={'status': 'Active'}, or_filters=[{'branch': employee.branch}, {'department': employee.department}])
-		recipients = get_employee_emails(recipients_list)
 
 		self.notify({
 			# for post in messages
