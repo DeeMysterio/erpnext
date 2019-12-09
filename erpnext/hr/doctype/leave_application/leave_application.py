@@ -10,6 +10,7 @@ from erpnext.hr.utils import set_employee_name, get_leave_period
 from erpnext.hr.doctype.leave_block_list.leave_block_list import get_applicable_block_dates
 from erpnext.hr.doctype.employee.employee import get_holiday_list_for_employee
 from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import daterange
+from erpnext.hr.doctype.employee.employee import get_employee_emails
 
 class LeaveDayBlockedError(frappe.ValidationError): pass
 class OverlapError(frappe.ValidationError): pass
@@ -293,10 +294,13 @@ class LeaveApplication(Document):
 		email_template = frappe.get_doc("Email Template", template)
 		message = frappe.render_template(email_template.response, args)
 
+		recipients_list = frappe.get_all('Employee', filters={'status': 'Active'})
+		recipients = get_employee_emails(recipients_list)
+
 		self.notify({
 			# for post in messages
 			"message": message,
-			"message_to": employee.user_id,
+			"message_to": recipients,
 			# for email
 			"subject": email_template.subject,
 			"notify": "employee"
