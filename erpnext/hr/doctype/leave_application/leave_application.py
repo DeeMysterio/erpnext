@@ -281,8 +281,10 @@ class LeaveApplication(Document):
 
 	def notify_employee(self):
 		employee = frappe.get_doc("Employee", self.employee)
-
-		recipients_list = frappe.get_all('Employee', filters={'status': 'Active'}, or_filters=[{'branch': employee.branch}, {'department': employee.department}])
+		if employee.branch or employee.department:
+			recipients_list = frappe.get_all('Employee', filters={'status': 'Active'}, or_filters=[{'branch': employee.branch}, {'department': employee.department}])
+		else:
+			recipients_list = employee.user_id
 		recipients = get_employee_emails(recipients_list)
 
 		if not recipients:
