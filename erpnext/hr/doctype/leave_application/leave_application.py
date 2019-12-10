@@ -281,8 +281,12 @@ class LeaveApplication(Document):
 
 	def notify_employee(self):
 		employee = frappe.get_doc("Employee", self.employee)
-		if employee.branch or employee.department:
+		if employee.branch and employee.department:
 			recipients_list = frappe.get_all('Employee', filters={'status': 'Active'}, or_filters=[{'branch': employee.branch}, {'department': employee.department}])
+		elif employee.branch:
+			recipients_list = frappe.get_all('Employee', filters={'status': 'Active', 'branch': employee.branch})
+		elif employee.department:
+			recipients_list = frappe.get_all('Employee', filters={'status': 'Active', 'department': employee.department})
 		else:
 			recipients_list = [employee.name]
 		recipients = get_employee_emails(recipients_list)
@@ -349,7 +353,8 @@ class LeaveApplication(Document):
 					subject = args.subject,
 					message = args.message,
 				)
-				frappe.msgprint(_("Email sent to {0}").format(", ".join(contact) if isinstance(contact, list) else contact))
+				contact = ", ".join(contact) if isinstance(contact, list) else contact
+				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:
 				pass
 
