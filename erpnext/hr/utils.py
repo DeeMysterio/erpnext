@@ -2,6 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
+import json
 import frappe, erpnext
 from frappe import _
 from frappe.utils import formatdate, format_datetime, getdate, get_datetime, nowdate, flt, cstr
@@ -21,45 +22,56 @@ class EmployeeBoardingController(Document):
 				activity.task = ''
 
 	def on_submit(self):
-		# create the project for the given employee onboarding
-		project_name = _(self.doctype) + " : "
-		if self.doctype == "Employee Onboarding":
-			project_name += self.job_applicant
-		else:
-			project_name += self.employee
-		project = frappe.get_doc({
-				"doctype": "Project",
-				"project_name": project_name,
-				"expected_start_date": self.date_of_joining if self.doctype == "Employee Onboarding" else self.resignation_letter_date,
-				"department": self.department,
-				"company": self.company
-			}).insert(ignore_permissions=True)
-		self.db_set("project", project.name)
-		self.db_set("boarding_status", "Pending")
-
-		# create the task for the given project and assign to the concerned person
-		for activity in self.activities:
-			task = frappe.get_doc({
-					"doctype": "Task",
-					"project": project.name,
-					"subject": activity.activity_name + " : " + self.employee_name,
-					"description": activity.description,
+		create_project_and_tasks = frappe.db.get_single_value("HR Settings", "stop_creating_project_and_tasks")
+		if not create_project_and_tasks:
+			# create the project for the given employee onboarding
+			project_name = _(self.doctype) + " : "
+			if self.doctype == "Employee Onboarding":
+				project_name += self.job_applicant
+			else:
+				project_name += self.employee
+			project = frappe.get_doc({
+					"doctype": "Project",
+					"project_name": project_name,
+					"expected_start_date": self.date_of_joining if self.doctype == "Employee Onboarding" else self.resignation_letter_date,
 					"department": self.department,
 					"company": self.company
 				}).insert(ignore_permissions=True)
-			activity.db_set("task", task.name)
-			users = [activity.user] if activity.user else []
-			if activity.role:
-				user_list = frappe.db.sql_list('''select distinct(parent) from `tabHas Role`
-					where parenttype='User' and role=%s''', activity.role)
-				users = users + user_list
+			self.db_set("project", project.name)
+			self.db_set("boarding_status", "Pending")
 
-				if "Administrator" in users:
-					users.remove("Administrator")
+			# create the task for the given project and assign to the concerned person
+			for activity in self.activities:
+				task = frappe.get_doc({
+						"doctype": "Task",
+						"project": project.name,
+						"subject": activity.activity_name + " : " + self.employee_name,
+						"description": activity.description,
+						"department": self.department,
+						"company": self.company
+					}).insert(ignore_permissions=True)
+				activity.db_set("task", task.name)
+				users = [activity.user] if activity.user else []
+				if activity.role:
+					user_list = frappe.db.sql_list('''select distinct(parent) from `tabHas Role`
+						where parenttype='User' and role=%s''', activity.role)
+					users = users + user_list
 
-			# assign the task the users
-			if users:
-				self.assign_task_to_users(task, set(users))
+					if "Administrator" in users:
+						users.remove("Administrator")
+
+				# assign the task the users
+				if users:
+					self.assign_task_to_users(task, set(users))
+
+	def on_update(self):
+		# update task statuses according to activity statuses
+		if self.project:
+			for activity in self.activities:
+				if activity.status != frappe.get_value("Task", activity.task, "status"):
+					task = frappe.get_doc("Task", activity.task)
+					task.status = activity.status
+					task.save()
 
 	def assign_task_to_users(self, task, users):
 		for user in users:
@@ -89,15 +101,32 @@ def get_onboarding_details(parent, parenttype):
 		order_by= "idx")
 
 @frappe.whitelist()
-def get_boarding_status(project):
+def fetch_task_status():
+	return frappe.get_meta("Task").get_options("status")
+
+@frappe.whitelist()
+def get_boarding_status(employee_onboarding):
+	print('**************status******************')
+
+	employee_onboarding = frappe._dict(json.loads(employee_onboarding))
+
 	status = 'Pending'
-	if project:
-		doc = frappe.get_doc('Project', project)
+	if employee_onboarding.project:
+		# update the onboarding status from project
+		doc = frappe.get_doc('Project', employee_onboarding.project)
 		if flt(doc.percent_complete) > 0.0 and flt(doc.percent_complete) < 100.0:
 			status = 'In Process'
 		elif flt(doc.percent_complete) == 100.0:
 			status = 'Completed'
 		return status
+	else:
+		# update the onboarding status from activities
+		for activity in employee_onboarding.activities:
+			if activity.get('status') == "Not Started" or activity.get('status') == "On Hold":
+				return 'Pending'
+			elif activity.get('status') == "In Process":
+				return 'In Process'
+		return 'Completed'
 
 def set_employee_name(doc):
 	if doc.employee and not doc.employee_name:
