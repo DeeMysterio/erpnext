@@ -110,6 +110,16 @@ def get_naming_series():
 		frappe.throw(_("Please setup numbering series for Attendance via Setup > Numbering Series"))
 	return series[0]
 
+def is_csv():
+	if getattr(frappe, "uploaded_file", None):
+		fname = frappe.uploaded_file
+	else:
+		fname = frappe.form_dict.filename
+
+	if fname.lower().endswith(".csv"):
+		return True
+	else:
+		return False
 
 @frappe.whitelist()
 def upload():
@@ -118,6 +128,9 @@ def upload():
 
 	from frappe.utils.csvutils import read_csv_content_from_uploaded_file
 	from frappe.modules import scrub
+
+	if not is_csv():
+		frappe.throw(_("Please upload a valid csv file."))
 
 	rows = read_csv_content_from_uploaded_file()
 	rows = list(filter(lambda x: x and any(x), rows))
