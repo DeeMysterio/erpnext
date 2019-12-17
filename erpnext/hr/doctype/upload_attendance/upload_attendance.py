@@ -124,7 +124,7 @@ def upload():
 		fname = frappe.form_dict.filename
 
 	if not fname.lower().endswith(".csv"):
-		frappe.throw(_("Please upload a valid csv file."))
+		frappe.throw(_("The file {} is not a valid csv file.".format(fname)))
 
 	rows = read_csv_content_from_uploaded_file()
 	rows = list(filter(lambda x: x and any(x), rows))
