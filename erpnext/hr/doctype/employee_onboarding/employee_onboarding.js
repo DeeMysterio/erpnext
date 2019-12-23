@@ -10,8 +10,9 @@ frappe.ui.form.on('Employee Onboarding', {
 
 		frm.set_query('job_offer', function () {
 			return {
-				filters: [
-					['Job Offer', 'applicant_name', '=', frm.doc.employee_name]]
+				filters: {
+					'applicant_name': frm.doc.employee_name
+				}
 			}
 		});
 	},
