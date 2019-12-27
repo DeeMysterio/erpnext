@@ -265,7 +265,7 @@ def send_birthday_reminders():
 			email_template = frappe.get_doc("Email Template", birthday_email_template)
 
 		for employee in employees:
-			recipients = [recipient.get('name') for recipient in recipients_list if recipient.get('company') == employee.company ]
+			recipients = [recipient.get('name') for recipient in recipients_list if recipient.get('company') == employee.company]
 			recipients = get_employee_emails(recipients)
 
 			if birthday_email_template:
