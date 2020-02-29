@@ -1,0 +1,27 @@
+{
+    "add_total_row": 0,
+    "creation": "2013-02-25 17:03:34",
+    "disable_prepared_report": 0,
+    "disabled": 0,
+    "docstatus": 0,
+    "doctype": "Report",
+    "idx": 3,
+    "is_standard": "Yes",
+    "modified": "2020-02-23 14:43:30.585513",
+    "modified_by": "Administrator",
+    "module": "Accounts",
+    "name": "Gross Profit 2",
+    "owner": "Administrator",
+    "prepared_report": 0,
+    "ref_doctype": "Sales Invoice",
+    "report_name": "Gross Profit 2",
+    "report_type": "Script Report",
+    "roles": [
+     {
+      "role": "Accounts Manager"
+     },
+     {
+      "role": "Accounts User"
+     }
+    ]
+   }
