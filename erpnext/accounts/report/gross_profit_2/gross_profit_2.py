@@ -82,6 +82,8 @@ def get_columns(group_wise_columns, filters):
 	})
 	for i in range(2):
 		for col in group_wise_columns.get(scrub(filters.group_by)):
+			if i == 1 and col == "item_group":
+				continue
 			col_title, col_type = column_map.get(col).split(":")
 			columns.append(col_title+"{0}:".format(i+1)+col_type)
 
@@ -91,7 +93,6 @@ def get_columns(group_wise_columns, filters):
 			"fieldtype": "Link",
 			"options": "Currency"
 		})
-
 	columns.append({
 		"fieldname": "difference_qty",
 		"label" : _("Difference Qty"),
