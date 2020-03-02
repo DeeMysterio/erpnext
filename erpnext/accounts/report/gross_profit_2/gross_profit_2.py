@@ -17,7 +17,6 @@ def execute(filters=None):
 	filters.currency = frappe.get_cached_value('Company',  filters.company,  "default_currency")
 	gross_profit_data = GrossProfitGenerator(filters)
 	data = []
-
 	group_wise_columns = frappe._dict({
 		"invoice": ["parent", "customer", "customer_group", "posting_date","item_code", "item_name","item_group", "brand", "description", \
 			"warehouse", "qty", "base_rate", "buying_rate", "base_amount",
@@ -42,16 +41,36 @@ def execute(filters=None):
 
 	columns = get_columns(group_wise_columns, filters)
 
+	def init_dict(invoice):
+		data_set = {}
+		for key in invoice:
+			data_set[key] = ""
+		data_set.pop('item_group')
+		return data_set
+	for row_list in gross_profit_data.grouped_data:
+		if len(row_list)==1:
+			filter_from2 = datetime.strptime(filters.get('from_date2'), '%Y-%m-%d').date()
+			posting_date = row_list[0].get('posting_date')
+			if posting_date < filter_from2:
+				row_list.append(init_dict(row_list[0]))
+
+			else:
+				temp = row_list[0]
+				row_list[0] = init_dict(row_list[0])
+				row_list.append(temp)
 	for row_list in gross_profit_data.grouped_data:
 		row = []
-		qty_diff = row_list[0].get('qty') - row_list[1].get('qty')
+
 		for row_list_item in row_list:
 			for col in group_wise_columns.get(scrub(filters.group_by)):
+				if row_list.index(row_list_item) == 1 and col == 'item_group':
+					continue
 				row.append(row_list_item.get(col))
-			row.append(filters.currency)
-		row.append(qty_diff)
+		qty1 = int(row_list[0].get('qty')) if bool(row_list[0].get('qty')) else 0
+		qty2 = int(row_list[1].get('qty')) if bool(row_list[1].get('qty')) else 0
+		row.append(filters.currency)
+		row.append(qty1-qty2)
 		data.append(row)
-
 	return columns, data
 
 def get_columns(group_wise_columns, filters):
@@ -87,12 +106,12 @@ def get_columns(group_wise_columns, filters):
 			col_title, col_type = column_map.get(col).split(":")
 			columns.append(col_title+"{0}:".format(i+1)+col_type)
 
-		columns.append({
-			"fieldname": "currency",
-			"label" : _("Currency{0}".format(i+1)),
-			"fieldtype": "Link",
-			"options": "Currency"
-		})
+	columns.append({
+		"fieldname": "currency",
+		"label" : _("Currency"),
+		"fieldtype": "Link",
+		"options": "Currency"
+	})
 	columns.append({
 		"fieldname": "difference_qty",
 		"label" : _("Difference Qty"),
@@ -354,15 +373,25 @@ class GrossProfitGenerator(object):
 		from2 = datetime.strptime(self.filters.from_date2, '%Y-%m-%d').date()
 		to2 = datetime.strptime(self.filters.to_date2, '%Y-%m-%d').date()
 
-		invoices1 = get_sales_inv(self, from1, to1)
-		invoices2 = get_sales_inv(self, from2, to2)
+		date_range1 = get_sales_inv(self, from1, to1)
+		date_range2 = get_sales_inv(self, from2, to2)
 
-		temp = invoices1[1]
-		invoices1[1] = invoices2[0]
-		invoices2[0] = temp
+		for item_group1 in date_range1:
+			group = []
+			item_group_exists = [item_group2 for item_group2 in date_range2 if item_group2.get('item_group')==item_group1.get('item_group')]
 
-		self.si_list.append(invoices1)
-		self.si_list.append(invoices2)
+			second_item = item_group_exists[0] if item_group_exists else {}
+			group.append(item_group1)
+			group.append(second_item)
+			self.si_list.append(group)
+
+		for item_group2 in date_range2:
+			item_group_exists = 0
+			for row in self.si_list:
+				if row[1].get('item_group') == item_group2.get('item_group'):
+					item_group_exists = 1
+			if item_group_exists == 0:
+				self.si_list.append([{}, item_group2])
 
 	def load_stock_ledger_entries(self):
 		res = frappe.db.sql("""select item_code, voucher_type, voucher_no,
