@@ -297,8 +297,8 @@ class ReceivablePayableReport(object):
 			si_list = frappe.db.sql("""
 				select name, due_date, po_no
 				from `tabSales Invoice`
-				where posting_date <= %s
-			""",self.filters.report_date, as_dict=1)
+				where posting_date >= %s and posting_date <= %s
+			""", (self.filters.start_from_date, self.filters.report_date), as_dict=1)
 			for d in si_list:
 				self.invoice_details.setdefault(d.name, d)
 
@@ -317,16 +317,16 @@ class ReceivablePayableReport(object):
 			for pi in frappe.db.sql("""
 				select name, due_date, bill_no, bill_date
 				from `tabPurchase Invoice`
-				where posting_date <= %s
-			""", self.filters.report_date, as_dict=1):
+				where posting_date >= %s and posting_date <= %s
+			""", (self.filters.start_from_date, self.filters.report_date), as_dict=1):
 				self.invoice_details.setdefault(pi.name, pi)
 
 		# Invoices booked via Journal Entries
 		journal_entries = frappe.db.sql("""
 			select name, due_date, bill_no, bill_date
 			from `tabJournal Entry`
-			where posting_date <= %s
-		""", self.filters.report_date, as_dict=1)
+			where posting_date >= %s and posting_date <= %s
+		""", (self.filters.start_from_date, self.filters.report_date), as_dict=1)
 
 		for je in journal_entries:
 			if je.bill_no:
@@ -569,6 +569,7 @@ class ReceivablePayableReport(object):
 				docstatus < 2
 				and party_type=%s
 				and (party is not null and party != '')
+				and posting_date >= %s
 				and posting_date <= %s
 				{1} {2}"""
 			.format(select_fields, conditions, order_by), values, as_dict=True)
@@ -591,7 +592,7 @@ class ReceivablePayableReport(object):
 
 	def prepare_conditions(self):
 		conditions = [""]
-		values = [self.party_type, self.filters.report_date]
+		values = [self.party_type, self.filters.start_from_date, self.filters.report_date]
 		party_type_field = scrub(self.party_type)
 
 		self.add_common_filters(conditions, values, party_type_field)

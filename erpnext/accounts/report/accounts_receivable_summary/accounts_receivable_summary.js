@@ -11,6 +11,12 @@ frappe.query_reports["Accounts Receivable Summary"] = {
 			"default": frappe.defaults.get_user_default("Company")
 		},
 		{
+			"fieldname":"start_from_date",
+			"label": __("Start From Date"),
+			"fieldtype": "Date",
+			"default": frappe.datetime.month_start()
+		},
+		{
 			"fieldname":"ageing_based_on",
 			"label": __("Ageing Based On"),
 			"fieldtype": "Select",
