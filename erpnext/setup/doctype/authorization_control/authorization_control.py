@@ -39,7 +39,7 @@ class AuthorizationControl(TransactionBase):
 	def validate_auth_rule(self, doctype_name, total, based_on, cond, company, item = ''):
 		chk = 1
 		add_cond1,add_cond2	= '',''
-		if based_on == 'Itemwise Discount':
+		if based_on in  ['Itemwise Discount', "Item Group wise Discount"]:
 			add_cond1 += " and master_name = " + frappe.db.escape(cstr(item))
 			itemwise_exists = frappe.db.sql("""select value from `tabAuthorization Rule`
 				where transaction = %s and value <= %s
@@ -56,7 +56,7 @@ class AuthorizationControl(TransactionBase):
 				self.get_appr_user_role(itemwise_exists, doctype_name, total, based_on, cond+add_cond1, item,company)
 				chk = 0
 		if chk == 1:
-			if based_on == 'Itemwise Discount':
+			if based_on in ['Itemwise Discount', "Item Group wise Discount"]:
 				add_cond2 += " and ifnull(master_name,'') = ''"
 
 			appr = frappe.db.sql("""select value from `tabAuthorization Rule`
@@ -90,6 +90,11 @@ class AuthorizationControl(TransactionBase):
 			if doc_obj:
 				for t in doc_obj.get("items"):
 					self.validate_auth_rule(doctype_name, t.discount_percentage, based_on, add_cond, company,t.item_code )
+		elif based_on == "Item Group wise Discount":
+			if doc_obj:
+				for t in doc_obj.get("items"):
+					if t.item_group:
+						self.validate_auth_rule(doctype_name, t.discount_percentage, based_on, add_cond, company, t.item_group, doc_obj, t)
 		else:
 			self.validate_auth_rule(doctype_name, auth_value, based_on, add_cond, company)
 
@@ -109,7 +114,7 @@ class AuthorizationControl(TransactionBase):
 
 			if price_list_rate: av_dis = 100 - flt(base_rate * 100 / price_list_rate)
 
-		final_based_on = ['Grand Total','Average Discount','Customerwise Discount','Itemwise Discount']
+		final_based_on = ['Grand Total','Average Discount','Customerwise Discount','Itemwise Discount', "Item Group wise Discount"]
 
 		# Check for authorization set for individual user
 		based_on = [x[0] for x in frappe.db.sql("""select distinct based_on from `tabAuthorization Rule`
@@ -122,7 +127,7 @@ class AuthorizationControl(TransactionBase):
 
 		# Remove user specific rules from global authorization rules
 		for r in based_on:
-			if r in final_based_on and r != 'Itemwise Discount': final_based_on.remove(r)
+			if r in final_based_on and r not in ['Itemwise Discount', "Item Group wise Discount"]: final_based_on.remove(r)
 
 		# Check for authorization set on particular roles
 		based_on = [x[0] for x in frappe.db.sql("""select based_on
@@ -137,12 +142,18 @@ class AuthorizationControl(TransactionBase):
 
 		# Remove role specific rules from global authorization rules
 		for r in based_on:
-			if r in final_based_on and r != 'Itemwise Discount': final_based_on.remove(r)
+			if r in final_based_on and r not in ['Itemwise Discount', "Item Group wise Discount"]: final_based_on.remove(r)
 
 		# Check for global authorization
 		for g in final_based_on:
 			self.bifurcate_based_on_type(doctype_name, total, av_dis, g, doc_obj, 0, company)
 
+		if self.custom_throw:
+			enqueue(set_custom_field, queue='default', timeout=6000, event='set_custom_field', docname=self.custom_doc_name,
+					custom_auth_details=self.custom_auth_details)
+			frappe.throw(_("Not authroized to submit. Items {0} needs to be approved by {1}")
+				.format(", ".join(self.custom_auth_details.keys()),
+						", ".join(list(set([str(d) for k,v in self.custom_auth_details.iteritems() for d in v.keys()])))))
 	def get_value_based_rule(self,doctype_name,employee,total_claimed_amount,company):
 		val_lst =[]
 		val = frappe.db.sql("""select value from `tabAuthorization Rule`
@@ -225,3 +236,21 @@ class AuthorizationControl(TransactionBase):
 				return app_specific_user
 			else:
 				return app_user
+
+def set_custom_field(docname, custom_auth_details):
+	appr_roles = []
+	doc = frappe.get_doc("Sales Order", docname)
+	for item in doc.get("items"):
+		auth_details = custom_auth_details.get(item.item_code)
+		given_role = None
+		if auth_details:
+			for role, discount in sorted(auth_details.iteritems(), key=lambda (k,v): (v,k)):
+				if discount<item.discount_percentage:
+					item.custom_approver_role = role
+					item.needs_approval = 1
+					appr_roles.append(role)
+
+	doc.needs_approval = 1
+	appr_roles = list(set(appr_roles))
+	doc.approval_by = ", ".join(appr_roles)
+	doc.save()
