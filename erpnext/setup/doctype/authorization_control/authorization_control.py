@@ -6,9 +6,16 @@ import frappe
 from frappe.utils import cstr, flt, has_common, comma_or
 from frappe import session, _
 from erpnext.utilities.transaction_base import TransactionBase
+from frappe.utils.background_jobs import enqueue
+from collections import defaultdict
+
 
 class AuthorizationControl(TransactionBase):
-	def get_appr_user_role(self, det, doctype_name, total, based_on, condition, item, company):
+	custom_throw = False
+	custom_doc_name = None
+	custom_auth_details = defaultdict(dict)
+
+	def get_appr_user_role(self, det, doctype_name, total, based_on, condition, item, company, doc_obj, item_obj):
 		amt_list, appr_users, appr_roles = [], [], []
 		users, roles = '',''
 		if det:
@@ -33,10 +40,19 @@ class AuthorizationControl(TransactionBase):
 				if(d[1]): appr_roles.append(d[1])
 
 			if not has_common(appr_roles, frappe.get_roles()) and not has_common(appr_users, [session['user']]):
-				frappe.msgprint(_("Not authroized since {0} exceeds limits").format(_(based_on)))
-				frappe.throw(_("Can be approved by {0}").format(comma_or(appr_roles + appr_users)))
+				self.custom_throw = True
+				if item_obj and (appr_roles or appr_users):
+					if appr_roles:
+						self.custom_auth_details[item_obj.item_code][appr_roles[0]] = flt(max_amount)
+					elif appr_users:
+						self.custom_auth_details[item_obj.item_code][appr_users[0]] = flt(max_amount)
+				if doc_obj:
+					self.custom_doc_name = doc_obj.name
 
-	def validate_auth_rule(self, doctype_name, total, based_on, cond, company, item = ''):
+				# frappe.msgprint(_("Not authroized since {0} exceeds limits").format(_(based_on)))
+				# frappe.throw(_("Can be approved by {0}").format(comma_or(appr_roles + appr_users)))
+
+	def validate_auth_rule(self, doctype_name, total, based_on, cond, company, item = '', doc_obj=None, item_obj=None):
 		chk = 1
 		add_cond1,add_cond2	= '',''
 		if based_on in  ['Itemwise Discount', "Item Group wise Discount"]:
@@ -53,7 +69,7 @@ class AuthorizationControl(TransactionBase):
 					('%s', '%s', '%s', cond, add_cond1), (doctype_name, total, based_on))
 
 			if itemwise_exists:
-				self.get_appr_user_role(itemwise_exists, doctype_name, total, based_on, cond+add_cond1, item,company)
+				self.get_appr_user_role(itemwise_exists, doctype_name, total, based_on, cond+add_cond1, item,company, doc_obj, item_obj)
 				chk = 0
 		if chk == 1:
 			if based_on in ['Itemwise Discount', "Item Group wise Discount"]:
@@ -70,7 +86,7 @@ class AuthorizationControl(TransactionBase):
 					and ifnull(company,'') = '' and docstatus != 2 %s %s""" %
 					('%s', '%s', '%s', cond, add_cond2), (doctype_name, total, based_on))
 
-			self.get_appr_user_role(appr, doctype_name, total, based_on, cond+add_cond2, item, company)
+			self.get_appr_user_role(appr, doctype_name, total, based_on, cond+add_cond2, item, company, doc_obj, item_obj)
 
 	def bifurcate_based_on_type(self, doctype_name, total, av_dis, based_on, doc_obj, val, company):
 		add_cond = ''
@@ -96,11 +112,15 @@ class AuthorizationControl(TransactionBase):
 					if t.item_group:
 						self.validate_auth_rule(doctype_name, t.discount_percentage, based_on, add_cond, company, t.item_group, doc_obj, t)
 		else:
-			self.validate_auth_rule(doctype_name, auth_value, based_on, add_cond, company)
+			self.validate_auth_rule(doctype_name, auth_value, based_on, add_cond, company, doc_obj)
 
 	def validate_approving_authority(self, doctype_name,company, total, doc_obj = ''):
 		if not frappe.db.count("Authorization Rule"):
 			return
+
+		self.custom_throw = False
+		self.custom_doc_name = None
+		self.custom_auth_details = defaultdict(dict)
 
 		av_dis = 0
 		if doc_obj:
@@ -243,8 +263,10 @@ def set_custom_field(docname, custom_auth_details):
 	for item in doc.get("items"):
 		auth_details = custom_auth_details.get(item.item_code)
 		given_role = None
+		def inverse(k, v):
+			return (v, k)
 		if auth_details:
-			for role, discount in sorted(auth_details.iteritems(), key=lambda (k,v): (v,k)):
+			for role, discount in sorted(auth_details.items(), key=inverse(k, v)):
 				if discount<item.discount_percentage:
 					item.custom_approver_role = role
 					item.needs_approval = 1
