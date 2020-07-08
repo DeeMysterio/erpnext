@@ -38,7 +38,6 @@ class AuthorizationControl(TransactionBase):
 			for d in app_dtl:
 				if(d[0]): appr_users.append(d[0])
 				if(d[1]): appr_roles.append(d[1])
-
 			if not has_common(appr_roles, frappe.get_roles()) and not has_common(appr_users, [session['user']]):
 				self.custom_throw = True
 				if item_obj and (appr_roles or appr_users):
@@ -48,9 +47,6 @@ class AuthorizationControl(TransactionBase):
 						self.custom_auth_details[item_obj.item_code][appr_users[0]] = flt(max_amount)
 				if doc_obj:
 					self.custom_doc_name = doc_obj.name
-
-				# frappe.msgprint(_("Not authroized since {0} exceeds limits").format(_(based_on)))
-				# frappe.throw(_("Can be approved by {0}").format(comma_or(appr_roles + appr_users)))
 
 	def validate_auth_rule(self, doctype_name, total, based_on, cond, company, item = '', doc_obj=None, item_obj=None):
 		chk = 1
@@ -167,13 +163,12 @@ class AuthorizationControl(TransactionBase):
 		# Check for global authorization
 		for g in final_based_on:
 			self.bifurcate_based_on_type(doctype_name, total, av_dis, g, doc_obj, 0, company)
-
 		if self.custom_throw:
-			enqueue(set_custom_field, queue='default', timeout=6000, event='set_custom_field', docname=self.custom_doc_name,
-					custom_auth_details=self.custom_auth_details)
+			enqueue(set_custom_field, queue='default', timeout=60000, event='set_custom_field', docname=self.custom_doc_name,
+					is_async=False, custom_auth_details=self.custom_auth_details)
 			frappe.throw(_("Not authroized to submit. Items {0} needs to be approved by {1}")
 				.format(", ".join(self.custom_auth_details.keys()),
-						", ".join(list(set([str(d) for k,v in self.custom_auth_details.iteritems() for d in v.keys()])))))
+						", ".join(list(set([str(d) for k,v in self.custom_auth_details.items() for d in v.keys()])))))
 	def get_value_based_rule(self,doctype_name,employee,total_claimed_amount,company):
 		val_lst =[]
 		val = frappe.db.sql("""select value from `tabAuthorization Rule`
@@ -263,10 +258,8 @@ def set_custom_field(docname, custom_auth_details):
 	for item in doc.get("items"):
 		auth_details = custom_auth_details.get(item.item_code)
 		given_role = None
-		def inverse(k, v):
-			return (v, k)
 		if auth_details:
-			for role, discount in sorted(auth_details.items(), key=inverse(k, v)):
+			for role, discount in auth_details.items():
 				if discount<item.discount_percentage:
 					item.custom_approver_role = role
 					item.needs_approval = 1
